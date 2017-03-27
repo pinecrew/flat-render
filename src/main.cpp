@@ -1,6 +1,8 @@
 #include <tuple>
 #include <iostream>
 #include <cstdint>
+#include <cerrno>
+#include <cstring>
 #include <GLFW/glfw3.h>
 #include "loader.hpp"
 
@@ -8,6 +10,7 @@
 const uint16_t window_width = 640;
 const uint16_t window_height = 480;
 const char * window_name = "flow render";
+const char * filename = "dump.bin";
 const uint16_t max_iterations = 2;
 
 // public data
@@ -68,7 +71,11 @@ void app_render(GLFWwindow * window) {
 
 /* INIT PROCEDURE */
 int8_t app_init() {
-    data = load_data("dump.bin");
+    data = load_data(filename);
+    if (!data) {
+        std::cerr << "[error]: " << std::strerror(errno) << " (" << filename << ")" << std::endl;
+        return -1;
+    }
     // Initialize the library
     if (!glfwInit()) {
         std::cerr << "[error]: couldn't initialize GLFW library" << std::endl;

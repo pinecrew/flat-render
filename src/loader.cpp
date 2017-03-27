@@ -3,6 +3,10 @@
 flat_data_t * load_data(const char * filename) {
     FILE * f = fopen(filename, "rb");
 
+    if (f == NULL) {
+        return NULL;
+    }
+
     flat_data_t * flat_data = new flat_data_t;
 
     fread(&(flat_data->particle_count), 1, sizeof(uint32_t), f);
