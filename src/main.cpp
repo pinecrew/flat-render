@@ -1,11 +1,15 @@
 #include <iostream>
 #include <cstdint>
 #include <GLFW/glfw3.h>
+#include "loader.hpp"
 
 // application constans
 const uint16_t window_width = 640;
 const uint16_t window_height = 480;
 const char * window_name = "flow render";
+
+// public data
+flat_data_t * data;
 
 void error_callback(int error, const char* description) {
     std::cout << "[error]: " << description << " (" << error << ")" << std::endl;
@@ -22,8 +26,7 @@ void app_render(GLFWwindow * window) {
 
 /* INIT PROCEDURE */
 int8_t app_init() {
-    GLFWwindow * window;
-
+    data = load_data("dump.bin");
     // Initialize the library
     if (!glfwInit()) {
         std::cerr << "[error]: couldn't initialize GLFW library" << std::endl;
@@ -32,7 +35,7 @@ int8_t app_init() {
     glfwSetErrorCallback(error_callback);
     std::cout << "[info]: GLFW " << glfwGetVersionString() << std::endl;
     // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(window_width, window_height, window_name, NULL, NULL);
+    GLFWwindow * window = glfwCreateWindow(window_width, window_height, window_name, NULL, NULL);
     if (!window) {
         std::cerr << "[error]: couldn't create GLFW window" << std::endl;
         glfwTerminate();
@@ -47,6 +50,7 @@ int8_t app_init() {
         glfwPollEvents();
     }
     glfwTerminate();
+    clean_data(data);
     return 0;
 }
 
