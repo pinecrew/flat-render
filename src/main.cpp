@@ -4,6 +4,8 @@
 #include <cmath>
 #include <cerrno>
 #include <cstring>
+#include <chrono>
+#include <thread>
 #include <GLFW/glfw3.h>
 #include "loader.hpp"
 
@@ -12,10 +14,11 @@ const uint16_t window_width = 640;
 const uint16_t window_height = 480;
 const char * window_name = "flow render";
 const char * filename = "dump.bin";
-const uint16_t max_iterations = 2;
 
 // public data
 flat_data_t * data;
+// application fps
+float frame_rate = 30.0f;
 
 // OMG WAT IS THIS DIRTY HACK?
 float find_area_radius(flat_data_t * data) {
@@ -34,7 +37,6 @@ void error_callback(int error, const char* description) {
 /* RENDER PROCEDURE */
 void app_render(GLFWwindow * window) {
     static uint32_t select_frame = 0;
-    static uint16_t iterations = 0;
 
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -50,19 +52,26 @@ void app_render(GLFWwindow * window) {
     glDrawArrays(GL_POINTS, 0, data->particle_count);
     glDisableClientState(GL_VERTEX_ARRAY);
 
-    // my superfast bycicle
-    if (iterations >= max_iterations) {
-        if (select_frame < data->frame_count) {
-            select_frame++;
-        } else {
-            select_frame = 0;
-        }
-        iterations = 0;
+    if (select_frame > data->frame_count) {
+        select_frame = 0;
     } else {
-        iterations++;
+        select_frame++;
     }
 
     glfwSwapBuffers(window);
+}
+
+void app_sleep(float frame_rate) {
+    static double frame_start = 0;
+    double wait_time = 1.0 / frame_rate;
+
+    double right_now = glfwGetTime();
+    if (right_now - frame_start < wait_time) {
+        double dur = (wait_time - (right_now - frame_start));
+        // I have no words...
+        std::this_thread::sleep_for(std::chrono::milliseconds(long(dur * 1000.0)));
+    }
+    frame_start = glfwGetTime();
 }
 
 /* INIT PROCEDURE */
@@ -103,9 +112,9 @@ int8_t app_init() {
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
-        app_render(window);
-        /* Poll for and process events */
         glfwPollEvents();
+        app_render(window);
+        app_sleep(frame_rate);
     }
     glfwTerminate();
     clean_data(data);
