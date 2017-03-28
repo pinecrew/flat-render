@@ -10,13 +10,17 @@
 #include "loader.hpp"
 
 // application constans
-const uint16_t window_width = 640;
-const uint16_t window_height = 480;
+const uint16_t window_width = 500;
+const uint16_t window_height = 500;
 const char * window_name = "flow render";
 const char * filename = "dump.bin";
 
 // public data
 flat_data_t * data;
+// data of lines (x1 y1 x2 y2) 
+float * grid;
+// lines in the grid
+uint8_t lines_count = 20;
 // application fps
 float frame_rate = 30.0f;
 
@@ -42,6 +46,23 @@ void app_render(GLFWwindow * window) {
 
     glLoadIdentity();
 
+    // draw grid (change the color)
+    glColor3f(0.5, 0.5f, 0.5f);
+    glPushMatrix();
+    glLoadIdentity();
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(2, GL_FLOAT, 0, grid);
+    glDrawArrays(GL_LINES, 0, 2 * lines_count);
+    glDisableClientState(GL_VERTEX_ARRAY);
+
+    glRotatef(90.0f, 0.0f, 0.0f, 1.0f);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(2, GL_FLOAT, 0, grid);
+    glDrawArrays(GL_LINES, 0, 2 * lines_count);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glPopMatrix();
+
+    // draw points
     glPointSize(5.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
 
@@ -72,6 +93,21 @@ void app_sleep(float frame_rate) {
         std::this_thread::sleep_for(std::chrono::milliseconds(long(dur * 1000.0)));
     }
     frame_start = glfwGetTime();
+}
+
+float * generate_grid(float r, uint8_t grid_count) {
+    const uint8_t coordinate_count = 4;
+    float grid_step = 2.0 * r / (float) grid_count;
+    float * grid_data = new float [grid_count * coordinate_count];
+
+    for (uint32_t i = 0; i < coordinate_count * grid_count; i += coordinate_count) {
+        grid_data[i + 0] = -r + grid_step * (i / coordinate_count);
+        grid_data[i + 1] = -r;
+        grid_data[i + 2] = -r + grid_step * (i / coordinate_count);
+        grid_data[i + 3] = r;
+    }
+
+    return grid_data;
 }
 
 /* INIT PROCEDURE */
@@ -110,6 +146,8 @@ int8_t app_init() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
+    grid = generate_grid(r, lines_count);
+
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -117,7 +155,10 @@ int8_t app_init() {
         app_sleep(frame_rate);
     }
     glfwTerminate();
+
+    delete[] grid;
     clean_data(data);
+
     return 0;
 }
 
