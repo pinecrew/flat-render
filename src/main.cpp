@@ -18,17 +18,15 @@ flat_data_t * data;
 
 // OMG WAT IS THIS DIRTY HACK?
 std::tuple<float, float, float, float> find_minmax(flat_data_t * data) {
-    float min_x = data->frame[0].data[0].px;
-    float min_y = data->frame[0].data[0].py;
-    float max_x = data->frame[0].data[0].px;
-    float max_y = data->frame[0].data[0].py;
-    for (uint32_t j = 0; j < data->frame_count; j++) {
-        for (uint32_t i = 1; i < data->particle_count; i++) {
-            min_x = min_x > data->frame[j].data[i].px ? data->frame[j].data[i].px : min_x;
-            min_y = min_y > data->frame[j].data[i].py ? data->frame[j].data[i].py : min_y;
-            max_x = max_x < data->frame[j].data[i].px ? data->frame[j].data[i].px : max_x;
-            max_y = max_y < data->frame[j].data[i].py ? data->frame[j].data[i].py : max_y;
-        }
+    float min_x = data->data[0];
+    float min_y = data->data[1];
+    float max_x = data->data[0];
+    float max_y = data->data[1];
+    for (uint32_t i = 0; i < 2 * data->frame_count * data->particle_count; i += 2) {
+        min_x = min_x > data->data[i + 0] ? data->data[i + 0] : min_x;
+        min_y = min_y > data->data[i + 1] ? data->data[i + 1] : min_y;
+        max_x = max_x < data->data[i + 0] ? data->data[i + 0] : max_x;
+        max_y = max_y < data->data[i + 1] ? data->data[i + 1] : max_y;
     }
     return std::make_tuple(min_x, max_x, min_y, max_y);
 }
@@ -48,11 +46,13 @@ void app_render(GLFWwindow * window) {
 
     glPointSize(5.0f);
     glColor3f(1.0f, 1.0f, 1.0f);
-    glBegin(GL_POINTS);
-    for (uint32_t i = 0; i < data->particle_count; i++) {
-        glVertex2f(data->frame[select_frame].data[i].px, data->frame[select_frame].data[i].py);
-    }
-    glEnd();
+
+    uint32_t current_frame = 2 * select_frame * data->particle_count;
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(2, GL_FLOAT, 0, data->data + current_frame);
+    glDrawArrays(GL_POINTS, 0, data->particle_count);
+    glDisableClientState(GL_VERTEX_ARRAY);
 
     // my superfast bycicle
     if (iterations >= max_iterations) {
