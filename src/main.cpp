@@ -1,6 +1,7 @@
 #include <tuple>
 #include <iostream>
 #include <cstdint>
+#include <cmath>
 #include <cerrno>
 #include <cstring>
 #include <GLFW/glfw3.h>
@@ -17,18 +18,13 @@ const uint16_t max_iterations = 2;
 flat_data_t * data;
 
 // OMG WAT IS THIS DIRTY HACK?
-std::tuple<float, float, float, float> find_minmax(flat_data_t * data) {
-    float min_x = data->data[0];
-    float min_y = data->data[1];
-    float max_x = data->data[0];
-    float max_y = data->data[1];
-    for (uint32_t i = 0; i < 2 * data->frame_count * data->particle_count; i += 2) {
-        min_x = min_x > data->data[i + 0] ? data->data[i + 0] : min_x;
-        min_y = min_y > data->data[i + 1] ? data->data[i + 1] : min_y;
-        max_x = max_x < data->data[i + 0] ? data->data[i + 0] : max_x;
-        max_y = max_y < data->data[i + 1] ? data->data[i + 1] : max_y;
+float find_area_radius(flat_data_t * data) {
+    float r2 = data->data[0] * data->data[0] + data->data[1] * data->data[1];
+    for (uint32_t i = 2; i < 2 * data->frame_count * data->particle_count; i += 2) {
+        float _r2 = data->data[i] * data->data[i] + data->data[i+1] * data->data[i+1];
+        if (_r2 > r2) { r2 = _r2; }
     }
-    return std::make_tuple(min_x, max_x, min_y, max_y);
+    return std::sqrt(r2);
 }
 
 void error_callback(int error, const char* description) {
@@ -99,12 +95,12 @@ int8_t app_init() {
     glViewport(0, 0, window_width, window_height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    auto mm = find_minmax(data);
+    auto r = find_area_radius(data);
     // set left, right, bottom, top, near, far of viewport
-    glOrtho(std::get<0>(mm), std::get<1>(mm), std::get<2>(mm), std::get<3>(mm), -1.0f, 1.0f);
+    glOrtho(-r, r, -r, r, -1.0f, 1.0f);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    
+
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
         app_render(window);
