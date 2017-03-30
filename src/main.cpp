@@ -15,14 +15,24 @@ const uint16_t window_height = 500;
 const char * window_name = "flow render";
 const char * filename = "dump.bin";
 
+/* LINES BLOCK */
+// lines in the grid
+const uint8_t lines_count = 20;
+// [x1, y1, x2, y2]
+const uint8_t coordinate_count = 4;
+// vertex to render
+const uint32_t vertex_count = lines_count * coordinate_count;
+// count of coordinates (2 for horizontal and vertical lines)
+const uint32_t elements_count = vertex_count * 2;
+
 // public data
 flat_data_t * data;
-// data of lines (x1 y1 x2 y2) 
+// data of lines
 float * grid;
-// lines in the grid
-uint8_t lines_count = 20;
 // application fps
 float frame_rate = 30.0f;
+// pause
+bool pause_flag = false;
 
 // OMG WAT IS THIS DIRTY HACK?
 float find_area_radius(flat_data_t * data) {
@@ -38,6 +48,15 @@ void error_callback(int error, const char* description) {
     std::cout << "[error]: " << description << " (" << error << ")" << std::endl;
 }
 
+void key_callback(GLFWwindow * window, int key, int scancode, int action, int mods) {
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+        pause_flag = !pause_flag;
+    }
+}
+
 /* RENDER PROCEDURE */
 void app_render(GLFWwindow * window) {
     static uint32_t select_frame = 0;
@@ -46,21 +65,19 @@ void app_render(GLFWwindow * window) {
 
     glLoadIdentity();
 
+    glEnable(GL_ALPHA_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     // draw grid (change the color)
-    glColor3f(0.5, 0.5f, 0.5f);
-    glPushMatrix();
-    glLoadIdentity();
+    glColor4f(0.5, 0.5f, 0.5f, 0.5f);
     glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(2, GL_FLOAT, 0, grid);
-    glDrawArrays(GL_LINES, 0, 2 * lines_count);
+    glDrawArrays(GL_LINES, 0, vertex_count);
     glDisableClientState(GL_VERTEX_ARRAY);
 
-    glRotatef(90.0f, 0.0f, 0.0f, 1.0f);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(2, GL_FLOAT, 0, grid);
-    glDrawArrays(GL_LINES, 0, 2 * lines_count);
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glPopMatrix();
+    glDisable(GL_BLEND);
+    glDisable(GL_ALPHA_TEST);
 
     // draw points
     glPointSize(5.0f);
@@ -73,10 +90,12 @@ void app_render(GLFWwindow * window) {
     glDrawArrays(GL_POINTS, 0, data->particle_count);
     glDisableClientState(GL_VERTEX_ARRAY);
 
-    if (select_frame > data->frame_count) {
-        select_frame = 0;
-    } else {
-        select_frame++;
+    if (!pause_flag) {
+        if (select_frame > data->frame_count) {
+            select_frame = 0;
+        } else {
+            select_frame++;
+        }
     }
 
     glfwSwapBuffers(window);
@@ -89,22 +108,28 @@ void app_sleep(float frame_rate) {
     double right_now = glfwGetTime();
     if (right_now - frame_start < wait_time) {
         double dur = (wait_time - (right_now - frame_start));
-        // I have no words...
-        std::this_thread::sleep_for(std::chrono::milliseconds(long(dur * 1000.0)));
+        long duration = long(std::round(dur * 1000.0));
+        std::this_thread::sleep_for(std::chrono::milliseconds(duration));
     }
     frame_start = glfwGetTime();
 }
 
-float * generate_grid(float r, uint8_t grid_count) {
-    const uint8_t coordinate_count = 4;
-    float grid_step = 2.0 * r / (float) grid_count;
-    float * grid_data = new float [grid_count * coordinate_count];
+float * generate_grid(float r) {
+    float grid_step = 2.0 * r / (float) lines_count;
+    float * grid_data = new float [elements_count];
+    uint32_t first_part = elements_count / 2;
 
-    for (uint32_t i = 0; i < coordinate_count * grid_count; i += coordinate_count) {
+    for (uint32_t i = 0; i < first_part; i += coordinate_count) {
+        // vertical lines
         grid_data[i + 0] = -r + grid_step * (i / coordinate_count);
         grid_data[i + 1] = -r;
         grid_data[i + 2] = -r + grid_step * (i / coordinate_count);
         grid_data[i + 3] = r;
+        // horizontal lines
+        grid_data[first_part + i + 0] = -r;
+        grid_data[first_part + i + 1] = -r + grid_step * (i / coordinate_count);
+        grid_data[first_part + i + 2] = r;
+        grid_data[first_part + i + 3] = -r + grid_step * (i / coordinate_count);
     }
 
     return grid_data;
@@ -122,7 +147,7 @@ int8_t app_init() {
         std::cerr << "[error]: couldn't initialize GLFW library" << std::endl;
         return -1;
     }
-    glfwSetErrorCallback(error_callback);
+
     std::cout << "[info]: GLFW " << glfwGetVersionString() << std::endl;
     // Create a windowed mode window and its OpenGL context
     GLFWwindow * window = glfwCreateWindow(window_width, window_height, window_name, NULL, NULL);
@@ -133,6 +158,9 @@ int8_t app_init() {
     }
     // Make the window's context current
     glfwMakeContextCurrent(window);
+
+    glfwSetErrorCallback(error_callback);
+    glfwSetKeyCallback(window, key_callback);
 
     // opengl init block
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -146,7 +174,7 @@ int8_t app_init() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    grid = generate_grid(r, lines_count);
+    grid = generate_grid(r);
 
     // Loop until the user closes the window
     while (!glfwWindowShouldClose(window)) {
