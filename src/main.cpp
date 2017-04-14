@@ -1,11 +1,13 @@
-#include <tuple>
-#include <iostream>
-#include <cstdint>
-#include <cmath>
 #include <cerrno>
-#include <cstring>
 #include <chrono>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <getopt.h>
+#include <iostream>
 #include <thread>
+#include <tuple>
+#include <unistd.h>
 #include <GLFW/glfw3.h>
 #include "loader.hpp"
 
@@ -13,7 +15,7 @@
 const uint16_t window_width = 500;
 const uint16_t window_height = 500;
 const char * window_name = "flow render";
-char filename[256] = "dump.bin";
+char filename[500] = "dump.bin";
 
 /* LINES BLOCK */
 // lines in the grid
@@ -193,7 +195,38 @@ int8_t app_init() {
     return 0;
 }
 
+void load_args(int argc, char * argv[]) {
+    struct option long_options[] = {
+        {"file", required_argument, 0, 'f'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
+    while (true) {
+        int option_index = 0;
+        int c = getopt_long(argc, argv, "hf:", long_options, &option_index);
+        if (c == -1) {
+            break;
+        }
+        switch (c) {
+            case 'f':
+                strcpy(filename, optarg);
+                break;
+            case 'h':
+                std::cout << "usage: " << argv[0] << " [OPTIONS]" << std::endl;
+                std::cout << "  --file, -f <argument>\t\tload data from file" << std::endl;
+                std::cout << "  --help, -h\t\t\tprint this info" << std::endl;
+                _exit(0);
+                break;
+            case '?':
+                break;
+            default:
+                abort();
+                break;
+        }
+    }
+}
+
 int main(int argc, char * argv[]) {
-    if (argc > 1) {strcpy(filename, argv[1]);}
+    load_args(argc, argv);
     return app_init();
 }
