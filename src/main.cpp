@@ -5,6 +5,7 @@
 #include <cstring>
 #include <getopt.h>
 #include <iostream>
+#include <limits.h>
 #include <thread>
 #include <tuple>
 #include <unistd.h>
@@ -15,7 +16,7 @@
 const uint16_t window_width = 500;
 const uint16_t window_height = 500;
 const char * window_name = "flow render";
-char filename[500] = "dump.bin";
+char filename[PATH_MAX] = "dump.bin";
 
 /* LINES BLOCK */
 // lines in the grid
