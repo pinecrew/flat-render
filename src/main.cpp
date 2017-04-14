@@ -159,6 +159,9 @@ int8_t app_init() {
     // Make the window's context current
     glfwMakeContextCurrent(window);
 
+    std::cout << "[info]: Renderer " << glGetString(GL_RENDERER) << std::endl;
+    std::cout << "[info]: OpenGL version supported " << glGetString(GL_VERSION) << std::endl;
+
     glfwSetErrorCallback(error_callback);
     glfwSetKeyCallback(window, key_callback);
 
