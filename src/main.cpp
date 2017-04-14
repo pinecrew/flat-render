@@ -13,7 +13,7 @@
 const uint16_t window_width = 500;
 const uint16_t window_height = 500;
 const char * window_name = "flow render";
-const char * filename = "dump.bin";
+char filename[256] = "dump.bin";
 
 /* LINES BLOCK */
 // lines in the grid
@@ -191,5 +191,6 @@ int8_t app_init() {
 }
 
 int main(int argc, char * argv[]) {
+    if (argc > 1) {strcpy(filename, argv[1]);}
     return app_init();
 }
